@@ -39,6 +39,31 @@ namespace DykBits.Sql
             _buffer.AppendLine(";");
             _buffer.AppendLine();
         }
+        public override void ExplicitVisit(AlterTableDropTableElementStatement node)
+        {
+            PgExpressionVisitor expressionVisitor = new PgExpressionVisitor(_buffer);
+            for(int index = 0, count = node.AlterTableDropTableElements.Count - 1; index <= count; ++index)
+            {
+                _buffer.Append("alter table ");
+                node.SchemaObjectName.Accept(expressionVisitor);
+                AlterTableDropTableElement element = node.AlterTableDropTableElements[index];
+                _buffer.Append(" drop ");
+                if(element.IsIfExists)
+                {
+                    _buffer.Append("if exists ");
+                }
+                switch (element.TableElementType)
+                {
+                    case TableElementType.Constraint:
+                        _buffer.Append("constraint ");
+                        element.Name.Accept(expressionVisitor);
+                        _buffer.AppendLine(";");
+                        break;
+                    default:
+                        throw new InvalidOperationException("unsupported table element name");
+                }
+            }
+        }
         public override void ExplicitVisit(CreateProcedureStatement node)
         {
         }
@@ -56,6 +81,17 @@ namespace DykBits.Sql
             node.Name.Accept(visitor);
             _buffer.Append(";");
             _buffer.AppendLine();
+        }
+        public override void ExplicitVisit(DropSchemaStatement node)
+        {
+            _buffer.Append("drop schema ");
+            PgExpressionVisitor visitor = new PgExpressionVisitor(_buffer);
+            if(node.IsIfExists)
+            {
+                _buffer.Append("if exists ");
+            }
+            node.Schema.Accept(visitor);
+            _buffer.AppendLine(";");
         }
         public override void ExplicitVisit(PrintStatement node)
         {
@@ -134,6 +170,21 @@ namespace DykBits.Sql
             PgTableDefinitionVisitor visitor = new PgTableDefinitionVisitor(_buffer);
             node.Accept(visitor);
             _database.Tables.Add(visitor.Table);
+        }
+        public override void ExplicitVisit(DropTableStatement node)
+        {
+            PgExpressionVisitor expressionVisitor = new PgExpressionVisitor(_buffer);
+            for (int index = 0, count = node.Objects.Count - 1; index <= count; ++index)
+            {
+                _buffer.Append("drop table");
+                if (node.IsIfExists)
+                {
+                    _buffer.Append(" if exists");
+                }
+                _buffer.Append(" ");
+                node.Objects[index].Accept(expressionVisitor);
+                _buffer.AppendLine(";");
+            }
         }
         internal static string GetTableName(SchemaObjectName tableName)
         {
