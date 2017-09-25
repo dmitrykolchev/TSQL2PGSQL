@@ -3,10 +3,7 @@ Converts T-SQL script to PostgreSql.
 
 This program converts T-SQL scripts to PostgreSql scripts.
 
-
-
-
-``` t-sql
+``` sql
 CREATE TABLE [person].[person_history] (
     [hid]               INT            NOT NULL,
     [person_id]         INT            NOT NULL,
