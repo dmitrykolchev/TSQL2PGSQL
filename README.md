@@ -34,7 +34,7 @@ This program converts T-SQL scripts to PostgreSql scripts.
 ### Supported T-SQL functions
 * GETUTCDATE
 * GETDATE
-* SUSER_SNAME_
+* SUSER_SNAME
 
 ``` sql
 CREATE TABLE [person].[person_history] (
