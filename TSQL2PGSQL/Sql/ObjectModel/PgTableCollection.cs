@@ -28,7 +28,18 @@ namespace DykBits.Sql.ObjectModel
             return GetEnumerator();
         }
         public int Count => _tables.Count;
-        public PgTable this[string name] => _tableFromName[name];
+        public PgTable this[string name]
+        {
+            get
+            {
+                if (_tableFromName.TryGetValue(name, out PgTable table))
+                {
+                    return table;
+                }
+                return null;
+            }
+        }
+         
         public PgTable this[int index] => _tables[index];
     }
 }

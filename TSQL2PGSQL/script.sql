@@ -40,11 +40,30 @@ USE [$(DatabaseName)];
 
 
 GO
-PRINT N'Dropping [sec].[fk_user_access_hierarchy_user]...';
+/*
+ Pre-Deployment Script Template							
+--------------------------------------------------------------------------------------
+ This file contains SQL statements that will be executed before the build script.	
+ Use SQLCMD syntax to include a file in the pre-deployment script.			
+ Example:      :r .\myfile.sql								
+ Use SQLCMD syntax to reference a variable in the pre-deployment script.		
+ Example:      :setvar TableName MyTable							
+               SELECT * FROM [$(TableName)]					
+--------------------------------------------------------------------------------------
+*/
+print '$$$-predeployment-start-do-not-change-this-line-$$$'
+
+
+
+print '$$$-predeployment-end-do-not-change-this-line-$$$'
+GO
+
+GO
+PRINT N'Dropping [sec].[fk_user_access_right_access_right]...';
 
 
 GO
-ALTER TABLE [sec].[user_access_hierarchy] DROP CONSTRAINT [fk_user_access_hierarchy_user];
+ALTER TABLE [sec].[user_access_right] DROP CONSTRAINT [fk_user_access_right_access_right];
 
 
 GO
@@ -56,35 +75,85 @@ ALTER TABLE [sec].[user_access_right] DROP CONSTRAINT [fk_user_access_right_user
 
 
 GO
-PRINT N'Dropping [core].[hierarchy_type]...';
+/*
+The column [sec].[user_access_right].[access_right_id] is being dropped, data loss could occur.
+
+The column [sec].[user_access_right].[access_right_code] on table [sec].[user_access_right] must be added, but the column has no default value and does not allow NULL values. If the table contains data, the ALTER script will not work. To avoid this issue you must either: add a default value to the column, mark it as allowing NULL values, or enable the generation of smart-defaults as a deployment option.
+*/
+GO
+PRINT N'Starting rebuilding table [sec].[user_access_right]...';
 
 
 GO
-DROP TABLE [core].[hierarchy_type];
+BEGIN TRANSACTION;
+
+SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;
+
+SET XACT_ABORT ON;
+
+CREATE TABLE [sec].[tmp_ms_xx_user_access_right] (
+    [user_id]           INT           NOT NULL,
+    [access_right_code] VARCHAR (128) NOT NULL,
+    CONSTRAINT [tmp_ms_xx_constraint_pk_user_access_right1] PRIMARY KEY CLUSTERED ([user_id] ASC, [access_right_code] ASC)
+);
+
+IF EXISTS (SELECT TOP 1 1 
+           FROM   [sec].[user_access_right])
+    BEGIN
+        INSERT INTO [sec].[tmp_ms_xx_user_access_right] ([user_id])
+        SELECT   [user_id]
+        FROM     [sec].[user_access_right]
+        ORDER BY [user_id] ASC;
+    END
+
+DROP TABLE [sec].[user_access_right];
+
+EXECUTE sp_rename N'[sec].[tmp_ms_xx_user_access_right]', N'user_access_right';
+
+EXECUTE sp_rename N'[sec].[tmp_ms_xx_constraint_pk_user_access_right1]', N'pk_user_access_right', N'OBJECT';
+
+COMMIT TRANSACTION;
+
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
 
 GO
-PRINT N'Dropping [dic].[company_setup_type]...';
+PRINT N'Creating [sec].[fk_user_access_right_access_right]...';
 
 
 GO
-DROP TABLE [dic].[company_setup_type];
+ALTER TABLE [sec].[user_access_right] WITH NOCHECK
+    ADD CONSTRAINT [fk_user_access_right_access_right] FOREIGN KEY ([access_right_code]) REFERENCES [sec].[access_right] ([code]);
 
 
 GO
-PRINT N'Dropping [sec].[user_access_hierarchy]...';
+/*
+Post-Deployment Script Template							
+--------------------------------------------------------------------------------------
+ This file contains SQL statements that will be appended to the build script.		
+ Use SQLCMD syntax to include a file in the post-deployment script.			
+ Example:      :r .\myfile.sql								
+ Use SQLCMD syntax to reference a variable in the post-deployment script.		
+ Example:      :setvar TableName MyTable							
+               SELECT * FROM [$(TableName)]					
+--------------------------------------------------------------------------------------
+*/
+print '$$$-postdeployment-start-do-not-change-this-line-$$$'
+
+
+print '$$$-postdeployment-end-do-not-change-this-line-$$$'
+GO
+
+GO
+PRINT N'Checking existing data against newly created constraints';
 
 
 GO
-DROP TABLE [sec].[user_access_hierarchy];
+USE [$(DatabaseName)];
 
 
 GO
-PRINT N'Dropping [enum]...';
-
-
-GO
-DROP SCHEMA [enum];
+ALTER TABLE [sec].[user_access_right] WITH CHECK CHECK CONSTRAINT [fk_user_access_right_access_right];
 
 
 GO

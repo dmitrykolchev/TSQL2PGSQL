@@ -74,6 +74,80 @@ namespace DykBits.Sql
         public override void ExplicitVisit(CreateSequenceStatement node)
         {
         }
+        public override void ExplicitVisit(ExecuteStatement node)
+        {
+            if (node.ExecuteSpecification.ExecutableEntity is ExecutableProcedureReference procedureReference)
+            {
+                if(string.Compare(procedureReference.ProcedureReference.ProcedureReference.Name.Identifiers[0].Value, "sp_rename", StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    if (procedureReference.Parameters.Count == 2)
+                    {
+                        _buffer.Append("alter table ");
+                        StringLiteral literal = (StringLiteral)procedureReference.Parameters[0].ParameterValue;
+
+                        _buffer.Append(literal.Value.Replace("[", "\"").Replace("]", "\""));
+                        _buffer.Append(" rename to ");
+                        literal = (StringLiteral)procedureReference.Parameters[1].ParameterValue;
+                        _buffer.Append(literal.Value.Replace("[", "\"").Replace("]", "\""));
+                        _buffer.AppendLine(";");
+                        return;
+                    }
+                    else if(procedureReference.Parameters.Count == 3)
+                    {
+                        _buffer.Append("alter table ");
+                        _buffer.Append("xxxxxxxxxxxxxxxx");
+                        _buffer.Append(" rename constraint ");
+                        StringLiteral literal = (StringLiteral)procedureReference.Parameters[0].ParameterValue;
+                        _buffer.Append(literal.Value.Replace("[", "\"").Replace("]", "\""));
+                        _buffer.Append(" to ");
+                        literal = (StringLiteral)procedureReference.Parameters[1].ParameterValue;
+                        _buffer.Append(literal.Value.Replace("[", "\"").Replace("]", "\""));
+                        _buffer.AppendLine(";");
+                        return;
+                    }
+                }
+                throw new NotSupportedException();
+            }
+            _buffer.Append("select ");
+            node.ExecuteSpecification.Accept(this);
+            _buffer.AppendLine(";");
+        }
+        public override void ExplicitVisit(ExecuteSpecification node)
+        {
+            if(node.ExecuteContext != null)
+            {
+                throw new NotSupportedException();
+            }
+            if(node.LinkedServer != null)
+            {
+                throw new NotSupportedException();
+            }
+            if(node.Variable != null)
+            {
+                throw new NotSupportedException();
+            }
+
+            if(node.ExecutableEntity is ExecutableProcedureReference procedureReference)
+            {
+                PgExpressionVisitor expressionVisitor = new PgExpressionVisitor(_buffer);
+                procedureReference.ProcedureReference.Accept(expressionVisitor);
+                _buffer.Append("(");
+                for(int index = 0, count = procedureReference.Parameters.Count - 1; index <= count; ++index)
+                {
+                    ExecuteParameter parameter = procedureReference.Parameters[index];
+                    parameter.Accept(expressionVisitor);
+                    if(index < count)
+                    {
+                        _buffer.Append(", ");
+                    }
+                }
+                _buffer.Append(")");
+            }
+            else
+            {
+                throw new NotSupportedException();
+            }
+        }
         public override void ExplicitVisit(CreateSchemaStatement node)
         {
             _buffer.Append("create schema ");
@@ -142,7 +216,7 @@ namespace DykBits.Sql
         }
         public override void ExplicitVisit(IfStatement node)
         {
-            if (_state != PgTranslatorState.Postdeplyment)
+            if (_state != PgTranslatorState.Postdeplyment && _state != PgTranslatorState.Deployment)
             {
                 return;
             }

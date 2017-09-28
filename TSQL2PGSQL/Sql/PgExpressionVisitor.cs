@@ -18,8 +18,13 @@ namespace DykBits.Sql
             _buffer = buffer;
             _table = table;
         }
+        public override void ExplicitVisit(ExecuteStatement node)
+        {
+            base.ExplicitVisit(node);
+        }
         public override void ExplicitVisit(SetIdentityInsertStatement node)
         {
+            _buffer.AppendLine();
             _buffer.Append("-- set identity_insert ");
             node.Table.Accept(this);
             _buffer.Append(node.IsOn ? " on" : " off");
@@ -326,6 +331,7 @@ namespace DykBits.Sql
             {
                 node.WhereClause.Accept(this);
             }
+            //_buffer.AppendLine(";");
         }
         public override void ExplicitVisit(InsertStatement node)
         {
