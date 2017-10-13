@@ -63,6 +63,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="pgscript1.sql" />
+    <Content Include="samisdb.sql" />
     <Content Include="script.sql">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
